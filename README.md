@@ -23,7 +23,7 @@
     - [AC 2.3：排行列表與 API 回傳資料一致](#ac-23排行列表與-api-回傳資料一致)
 - [完整測試結果](#完整測試結果)
   - [Playwright 測試報告截圖](#playwright-測試報告截圖)
-  - [完整測試報告](#完整測試報告錄影檔)
+  - [完整測試報告錄影檔](#完整測試報告錄影檔)
 - [CI](#ci)
 - [注意事項](#注意事項)
 
@@ -333,7 +333,7 @@ So that 我能依照指定時間範圍查看正確的熱門文章、排名與閱
 <img width="1024" height="795" alt="image" src="https://github.com/user-attachments/assets/cbfcc368-436d-472d-8901-749d44f4801b" />
 
 #### 完整測試報告錄影檔
-完整操作錄影可參考：  [查看測試操作影片](https://drive.google.com/file/d/1_n-A1IL7RnVvwXuzmwjdMddz2r7WjPlW/view?usp=drive_link)
+完整操作錄影可參考：  [查看測試操作影片](https://drive.google.com/file/d/1OJQPKjQ2Dz1i5spPOUgAagfq0R2tMjiB/view?usp=drive_link)
 
 ## CI
 
