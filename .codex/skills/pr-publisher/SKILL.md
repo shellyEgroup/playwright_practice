@@ -1,13 +1,13 @@
 ---
 name: pr-publisher
-description: Draft and publish GitHub pull requests from local repository changes after inspecting the current diff, branch, commits, and related issue. Use when the user asks to create, draft, prepare, send, open, or publish a PR / pull request, especially when they want the PR written in Chinese, linked to an issue, assigned to themselves, or reviewed before publishing. Always provide the PR draft first and publish only after explicit user confirmation.
+description: Draft and publish GitHub pull requests from local repository changes after inspecting the current diff, branch, commits, and related issue. Save the editable PR draft as Markdown, then publish from that Markdown only after explicit user confirmation. Use when the user asks to create, draft, prepare, send, open, or publish a PR / pull request, especially when they want the PR written in Chinese, linked to an issue, assigned to themselves, or reviewed before publishing.
 ---
 
 # PR Publisher
 
 Prepare a GitHub pull request from local changes and related issue context. Default to Traditional Chinese for the PR title and body.
 
-Hard rule: always show a complete PR draft first. Never commit, push, create, update, or publish a PR in the same turn that first prepares the draft unless the user has already reviewed that exact draft and explicitly confirmed publishing.
+Hard rule: always save a complete editable PR draft to a Markdown file first. Never commit, push, create, update, or publish a PR in the same turn that first prepares the draft unless the user has already reviewed that exact Markdown draft and explicitly confirmed publishing.
 
 ## Workflow
 
@@ -24,10 +24,12 @@ Hard rule: always show a complete PR draft first. Never commit, push, create, up
    - If no related issue is discoverable, say so in the draft and use `Related Issue: N/A`.
    - For this project, default assignee is `shellyEgroup` unless the user requests another assignee.
 4. Draft the PR in Traditional Chinese by default, except the PR title must follow the issue title format.
-5. Always output the complete PR draft first, including title, body, target repository, source branch, target branch if known, related issue, and assignee.
-6. Ask the user to confirm publishing after the draft. Stop there.
-7. Do not stage, commit, push, create, update, or publish a PR until a later user message explicitly confirms the shown draft with wording such as `發布`, `送出 PR`, `建立 PR`, `可以發`, `確認`, or equivalent.
-8. When publishing after confirmation:
+5. Save the complete editable PR draft as a Markdown file under `.codex/drafts/`, creating the directory when needed. Include title, body, target repository, source branch, target branch if known, related issue, assignee, and draft/ready PR mode in the file.
+6. Reply with the draft file path, title, target repository, source branch, target branch, related issue, assignee, PR mode, and a short note that the user can edit the Markdown directly. Do not paste the full draft body unless the user asks.
+7. Ask the user to confirm publishing after they review or edit the Markdown draft. Stop there.
+8. Do not stage, commit, push, create, update, or publish a PR until a later user message explicitly confirms the Markdown draft with wording such as `發布`, `送出 PR`, `建立 PR`, `可以發`, `確認`, or equivalent.
+9. When publishing after confirmation:
+   - Re-read the Markdown draft file and use its current contents as the PR title/body/metadata source.
    - Re-check `git status --short` and verify the intended changes still match the confirmed draft.
    - If there are uncommitted changes, stage only the intended files and create a focused commit with a Chinese or conventional commit message matching the PR.
    - Push the source branch.
@@ -83,17 +85,43 @@ Hard rule: always show a complete PR draft first. Never commit, push, create, up
 
 Use `Refs #<issue-number>` instead of `Closes #<issue-number>` when the PR should not automatically close the issue.
 
+## Draft File Rules
+
+- Store drafts in `.codex/drafts/`.
+- Use a readable filename such as `pr-issue-<issue-number>.md` when an issue number exists, otherwise `pr-<short-topic>.md`; add a timestamp or numeric suffix if the file already exists.
+- The Markdown draft must include editable metadata at the top, followed by the GitHub PR body:
+
+```markdown
+# Issue/<issue-number>
+
+Repository: shellyEgroup/playwright_practice
+Source Branch: <current-branch>
+Target Branch: <target-branch>
+Related Issue: #<issue-number>
+Assignee: shellyEgroup
+PR Mode: ready
+
+---
+
+<PR body>
+```
+
+- Treat the first level-1 heading as the PR title.
+- Treat the content after the first `---` separator as the PR body.
+- Treat `PR Mode: draft` as a GitHub Draft PR request; any other value defaults to a ready PR unless the user says otherwise.
+- Preserve user edits in the Markdown file. When publishing, do not reconstruct the PR body from chat history if the file exists.
+
 ## Publishing Rules
 
 Publishing is a two-step process:
 
-1. Draft turn: show the draft and ask for confirmation. Do not stage, commit, push, create, update, or publish a PR.
-2. Publish turn: only after the user confirms the shown draft, perform the required git and GitHub actions.
+1. Draft turn: write the Markdown draft file and ask for confirmation. Do not stage, commit, push, create, update, or publish a PR.
+2. Publish turn: only after the user confirms the Markdown draft, re-read the file and perform the required git and GitHub actions.
 
 Before asking for confirmation, show:
 
+- draft file path
 - PR title
-- PR body
 - target repository
 - source branch
 - target branch
@@ -101,7 +129,7 @@ Before asking for confirmation, show:
 - assignee
 - whether it will be a ready PR or GitHub Draft PR
 
-Only after explicit confirmation in a follow-up user message, publish with:
+Only after explicit confirmation in a follow-up user message, parse the Markdown draft and publish with:
 
 - target repo: detected repo or `shellyEgroup/playwright_practice`
 - assignee: default `shellyEgroup`
@@ -114,6 +142,7 @@ After creation, report the PR number and URL.
 Before showing the draft, verify:
 
 - The draft reflects the actual local diff and untracked files.
+- The editable Markdown draft exists under `.codex/drafts/`.
 - Related issue context is included when discoverable.
 - The title and body are written in Traditional Chinese unless the user requested another language.
 - The PR title follows `Issue/<issue-number>` when a related issue exists.
