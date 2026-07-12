@@ -28,6 +28,7 @@ jobs:
       - name: Run Playwright tests in Docker
         run: |
           docker run --rm --ipc=host \
+            -e CI=true \
             -v ${{ github.workspace }}/playwright-report:/app/playwright-report \
             -v ${{ github.workspace }}/test-results:/app/test-results \
             egroup-playwright-tests
