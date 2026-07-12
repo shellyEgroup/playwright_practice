@@ -1,7 +1,7 @@
-import { dateRangePresets } from "../../../constants/app-config";
-import { test } from "../../../fixtures";
-import { HotKnowledgeRankingSection } from "../../common/components/hot-knowledge-ranking-section";
-import { rankingTestParams } from "../../../test-data/ranking.params";
+import { dateRangePresets } from "../../../../constants/app-config";
+import { test } from "../../../../fixtures";
+import { HotKnowledgeRankingSection } from "../../../common/components/hot-knowledge-ranking-section";
+import { rankingTestParams } from "../../../../test-data/ranking.params";
 
 for (const { name, serviceModuleValue, targetUrl } of rankingTestParams) {
   test(`[${name}] 熱門知識庫可以切換時間範圍`, async ({
