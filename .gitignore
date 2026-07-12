@@ -8,5 +8,8 @@ node_modules/
 /playwright/.auth/
 /.playwright-cli
 
+/.codex/drafts
+
 **/agents/*.yaml
 **/agents/*.yml
+
