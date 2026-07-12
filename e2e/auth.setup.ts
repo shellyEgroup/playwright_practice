@@ -3,7 +3,9 @@ import { config } from "../config";
 import { LoginApi } from "../api/login-api";
 import { UserInfoApi } from "../api/user-info";
 import { getXsrfTokenFromCookies } from "../utils/xsrf-token";
+import { routes } from "../constants/routes";
 import { setCommonLocalStorage } from "./common/storage-state";
+import { WeeklyUpdateDialog } from "./common/components/weekly-update-dialog";
 
 const BASE_URL = config.baseUrl;
 const STORAGE_STATE_PATH = config.storageStates.authenticated;
@@ -66,6 +68,10 @@ setup("auth setup", async ({ context, page }) => {
     },
   );
 
-  // 7. 存成 Playwright storageState
-  await context.storageState({ path: STORAGE_STATE_PATH });
+  // 7. 關閉本週更新彈窗，讓 read receipts 寫入 IndexedDB
+  await page.goto(routes.knowledgeBase.root, { waitUntil: "domcontentloaded" });
+  await new WeeklyUpdateDialog(page).dismissIfVisible();
+
+  // 8. 存成 Playwright storageState，包含本週更新 read receipts 的 IndexedDB
+  await context.storageState({ path: STORAGE_STATE_PATH, indexedDB: true });
 });
