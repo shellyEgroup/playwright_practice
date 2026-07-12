@@ -1,6 +1,6 @@
 # Egroup Playwright E2E Tests
 
-這是一個使用 Playwright + TypeScript 撰寫的端對端測試專案，主要驗證 Family FinHealth 網站的知識庫影音權限、Email 登入流程與熱門排行相關功能。測試同時使用瀏覽器操作與 API fixture，讓 UI 驗證可以對照後端即時回傳資料。
+這是一個使用 Playwright + TypeScript 撰寫的端對端測試專案，主要驗證 Family FinHealth 網站的知識庫影音權限、Email 登入流程與熱門排行相關功能。測試同時使用瀏覽器操作、Mock API 與 API fixture，讓 UI 互動、整合 smoke 與 API contract 可以分層驗證。
 
 ## 目錄
 
@@ -25,7 +25,9 @@
   - [User Story 2：依時間區間查看熱門文章排行](#user-story-2依時間區間查看熱門文章排行)
     - [AC 2.1：所有支援的時間區間皆可正確切換](#ac-21所有支援的時間區間皆可正確切換)
     - [AC 2.2：切換時間區間後，畫面顯示目前選取區間](#ac-22切換時間區間後畫面顯示目前選取區間)
-    - [AC 2.3：排行列表與 API 回傳資料一致](#ac-23排行列表與-api-回傳資料一致)
+    - [AC 2.3：排行列表與 Mock API 回傳資料一致](#ac-23排行列表與-mock-api-回傳資料一致)
+    - [AC 2.4：保留 LAST_7_DAYS 真實 API Smoke](#ac-24保留-last_7_days-真實-api-smoke)
+    - [AC 2.5：Rankings API Schema 驗證](#ac-25rankings-api-schema-驗證)
   - [User Story 3：透過 Email 與密碼登入系統](#user-story-3透過-email-與密碼登入系統)
     - [AC 3.1：Email 登入表單欄位顯示](#ac-31email-登入表單欄位顯示)
     - [AC 3.2：有效帳密登入成功並顯示 Toast](#ac-32有效帳密登入成功並顯示-toast)
@@ -40,7 +42,7 @@
 - 使用 Playwright 測試桌面 Chrome 與 iPhone Safari。
 - 透過 `auth.setup.ts` 與 `guest.setup.ts` 預先產生登入/未登入 `storageState`，讓不同狀態的測試可以重用狀態。
 - 使用 Page Object / Component Object 封裝頁面與元件行為。
-- 使用 API client 取得測試資料，降低測試資料硬編碼。
+- 依測試責任選擇 Mock API、API client 或真實 API smoke，降低資料變動造成的維護成本。
 - 在 GitHub Actions 透過 Docker 執行測試並上傳 Playwright report。
 
 ## 技術棧
@@ -78,6 +80,7 @@
 │   ├── endpoints.ts
 │   └── routes.ts
 ├── e2e/
+│   ├── api/                    # API-only 測試，例如 rankings response schema
 │   ├── auth.setup.ts            # 登入 setup，產生 authenticated storageState
 │   ├── guest.setup.ts           # 未登入 setup，產生 guest storageState
 │   ├── common/
@@ -97,7 +100,8 @@
 │   └── knowledge-base-video-tag.fixtures.ts
 ├── specs/                       # 規格或需求文件補充資料，目前保留空目錄
 ├── test-data/                   # 測試資料矩陣與參數
-│   └── ranking.params.ts
+│   ├── ranking.mock-data.ts     # 熱門排行 UI mock 資料
+│   └── ranking.params.ts        # 熱門排行頁面與 service module 測試矩陣
 ├── utils/                       # 共用工具函式
 │   └── xsrf-token.ts
 ├── playwright/                  # Playwright 產物目錄，.auth / .cache 不提交
@@ -133,6 +137,12 @@ npx playwright test --project=authenticated-chromium
 
 ```bash
 npx playwright test --project=guest-mobile-safari
+```
+
+只執行 API-only 測試：
+
+```bash
+npx playwright test --project=api
 ```
 
 開啟測試報告：
@@ -189,6 +199,7 @@ Playwright 設定位於 `playwright.config.ts`：
 - `setup:authenticated` project 會先執行 `e2e/auth.setup.ts`。
 - `setup:guest` project 會先執行 `e2e/guest.setup.ts`。
 - `authenticated-chromium` / `authenticated-mobile-safari` 只執行 `tests/authenticated` 與 `tests/shared`。
+- `api` 使用 authenticated storage state，只執行 `e2e/api/**/*.spec.ts`。
 - `guest-chromium` / `guest-mobile-safari` 只執行 `tests/guest` 與 `tests/shared`。
 - 測試報告使用 `html` 與 `github` reporter。
 - retry、worker 數量會依照是否在 CI 環境調整。
@@ -203,12 +214,14 @@ Playwright 設定位於 `playwright.config.ts`：
 | `setup:guest` | setup | Playwright 預設 context | 輸出 `playwright/.auth/guest.json` | `e2e/guest.setup.ts` |
 | `authenticated-chromium` | test | Desktop Chrome | 使用 authenticated storage state | `tests/authenticated/**/*.spec.ts`、`tests/shared/**/*.spec.ts` |
 | `authenticated-mobile-safari` | test | iPhone 15 | 使用 authenticated storage state | `tests/authenticated/**/*.spec.ts`、`tests/shared/**/*.spec.ts` |
+| `api` | test | APIRequestContext | 使用 authenticated storage state | `e2e/api/**/*.spec.ts` |
 | `guest-chromium` | test | Desktop Chrome | 使用 guest storage state | `tests/guest/**/*.spec.ts`、`tests/shared/**/*.spec.ts` |
 | `guest-mobile-safari` | test | iPhone 15 | 使用 guest storage state | `tests/guest/**/*.spec.ts`、`tests/shared/**/*.spec.ts` |
 
 Project 命名刻意保留狀態與裝置資訊：
 
 - `authenticated-*`：代表使用已登入會員狀態，適合驗證會員權限、登入後內容與 API 對照。
+- `api`：代表已登入 API-only 驗證，適合驗證 API response schema 與 contract，不啟動 UI 流程。
 - `guest-*`：代表使用未登入狀態，適合驗證登入提示、未授權遮罩、訪客可見內容與登入入口。
 - `*-chromium`：桌機版 UI 驗證。
 - `*-mobile-safari`：手機版 UI 驗證，使用 `devices["iPhone 15"]`，並有較長 timeout 與 retry。
@@ -433,7 +446,11 @@ So that 我能依照指定時間範圍查看正確的熱門文章、排名與閱
 
 `e2e/knowledge-base/tests/authenticated/knowledge-base-hot-article-listing.spec.ts`
 
-此測試驗證熱門知識排行區塊在不同頁面與不同時間範圍下，UI 顯示是否與 rankings API 回傳資料一致。
+此測試將熱門知識排行拆成三層驗證：
+
+1. UI 測試使用 Playwright `page.route` mock rankings API，專注驗證時間範圍切換、按鈕 accessible name、摘要文字、排行列表渲染與前端送出的 API payload。
+2. 保留一支 `LAST_7_DAYS` 真實 API smoke 測試，確認前端與 rankings API 的基本整合沒有中斷。
+3. `e2e/api/rankings-api.spec.ts` 以 API-only 測試驗證 rankings response schema。
 
 **測試範圍**
 
@@ -449,20 +466,22 @@ So that 我能依照指定時間範圍查看正確的熱門文章、排名與閱
 > **Given** 系統支援多個時間區間  
 > **When** 我逐一切換所有支援的時間區間  
 > **Then** 每個時間區間皆應能正確切換  
-> **And** 每個時間區間的排行資料皆應與 API 回傳資料一致
+> **And** 每個時間區間的排行資料皆應與 Mock API 回傳資料一致
 
 **測試流程**
 
 1. 使用 `for (const preset in dateRangePresets)` 逐一切換所有支援的時間區間。
-2. 每次切換後都重新呼叫 rankings API。
-3. 每個時間區間都重新驗證按鈕、摘要文字與排行列表。
+2. 在進入目標頁前使用 `page.route` 攔截 rankings API。
+3. 每個時間範圍由 `createRankingMockByDateRange()` 提供 1 筆 mock 排行資料。
+4. 每次切換後重新驗證按鈕、摘要文字、排行列表與前端送出的 API payload。
 
 **Expect 對應**
 
-| Acceptance Criteria                 | Playwright Expect                                                                  |
-| ----------------------------------- | ---------------------------------------------------------------------------------- |
-| 每個時間區間皆能正確切換            | `expectTimeRangeButtonLabel(label)` 與 `expectTimeRangeLabel(label)` (詳看 AC 2.2) |
-| 每個時間區間的排行資料皆與 API 一致 | `expectItemsToMatch(rankings)` (詳看 AC 2.3)                                   |
+| Acceptance Criteria                      | Playwright Expect                                                                  |
+| ---------------------------------------- | ---------------------------------------------------------------------------------- |
+| 每個時間區間皆能正確切換                 | `expectTimeRangeButtonLabel(label)` 與 `expectTimeRangeLabel(label)` (詳看 AC 2.2) |
+| 每個時間區間的排行資料皆與 Mock API 一致 | `expectItemsToMatch(rankingsByDateRange[value])` (詳看 AC 2.3)                    |
+| 前端送出的 API payload 正確              | `expect(matchingPayload).toMatchObject(...)` 驗證 `serviceModule`、`actionType`、`limit` |
 
 - [時間區間皆可正確切換] ![時間區間皆可正確切換](https://github.com/user-attachments/assets/7f842afe-1131-4553-bbe8-36dab51a008f)    
 
@@ -488,33 +507,69 @@ So that 我能依照指定時間範圍查看正確的熱門文章、排名與閱
 
 - [畫面顯示目前選取區間] <img width="3228" height="2287" alt="顯示目前選取區間" src="https://github.com/user-attachments/assets/0e51eb18-65ae-43cb-a1b9-914c1000351a" />
 
-#### AC 2.3：排行列表與 API 回傳資料一致
+#### AC 2.3：排行列表與 Mock API 回傳資料一致
 
 > **Given** 我已選取任一支援的時間區間  
 > **When** 系統取得該時間區間的熱門文章排行資料  
-> **Then** 前端顯示的排行筆數應與 API 回傳資料一致  
-> **And** 每筆排行的排名應與 API 回傳資料一致  
-> **And** 每筆排行的文章標題應與 API 回傳資料一致  
-> **And** 每筆排行的閱讀數應與 API 回傳資料一致
+> **Then** 前端顯示的排行筆數應與 Mock API 回傳資料一致  
+> **And** 每筆排行的排名應與 Mock API 回傳資料一致  
+> **And** 每筆排行的文章標題應與 Mock API 回傳資料一致  
+> **And** 每筆排行的閱讀數應與 Mock API 回傳資料一致
 
 **測試流程**
 
-1. 呼叫 `RankingsApi.list()` 取得同一個時間範圍與 service module 的排行資料。
-2. 使用 API 回傳的 `rankings` 作為 UI 驗證依據。
+1. `mockRankingsApi()` 依 request payload 的 `dateRangePreset` 回傳對應 mock rankings。
+2. 使用 `rankingsByDateRange[value]` 作為 UI 驗證依據。
+3. 同時保存 request payload，確認前端帶出正確的 `serviceModule`、`actionType` 與 `limit`。
 
 **Expect 對應**
 
 | Acceptance Criteria           | Playwright Expect                                                                                |
 | ----------------------------- | ------------------------------------------------------------------------------------------------ |
-| 前端顯示的排行筆數與 API 一致 | `expect(this.rankingLinks).toHaveCount(rankings.length)`                                         |
-| 每筆排行的排名與 API 一致     | `expect(item).toHaveAccessibleName(...)` 與 `expect(item).toContainText(...)` 驗證 `rank`        |
-| 每筆排行的文章標題與 API 一致 | `expect(item).toHaveAccessibleName(...)` 與 `expect(item).toContainText(expected.targetTitle)`   |
-| 每筆排行的閱讀數與 API 一致   | `expect(item).toHaveAccessibleName(...)` 與 `expect(item).toContainText(...)` 驗證 `actionCount` |
+| 前端顯示的排行筆數與 Mock API 一致 | `expect(this.rankingLinks).toHaveCount(rankings.length)`                                         |
+| 每筆排行的排名與 Mock API 一致     | `expect(item).toHaveAccessibleName(...)` 與 `expect(item).toContainText(...)` 驗證 `rank`        |
+| 每筆排行的文章標題與 Mock API 一致 | `expect(item).toHaveAccessibleName(...)` 與 `expect(item).toContainText(expected.targetTitle)`   |
+| 每筆排行的閱讀數與 Mock API 一致   | `expect(item).toHaveAccessibleName(...)` 與 `expect(item).toContainText(...)` 驗證 `actionCount` |
 | 每筆排行項目可被使用者看到    | `expect(item).toBeVisible()`                                                                     |
 
 整體列表比對由 `expectItemsToMatch(rankings)` 負責，並逐筆呼叫 `expectItemAtIndexToMatch(ranking)`。
 
-- [排行列表與 API 回傳資料一致] <img width="3034" height="2475" alt="與API一致" src="https://github.com/user-attachments/assets/e4c29761-7719-4b71-912d-a891dd0636b7" />
+- [排行列表與 Mock API 回傳資料一致] <img width="3034" height="2475" alt="與Mock API一致" src="https://github.com/user-attachments/assets/e4c29761-7719-4b71-912d-a891dd0636b7" />
+
+#### AC 2.4：保留 LAST_7_DAYS 真實 API Smoke
+
+> **Given** 我進入知識庫頁  
+> **When** 我切換熱門排行時間範圍為最近 7 天  
+> **Then** 畫面應顯示最近 7 天的時間範圍狀態  
+> **And** 排行列表應可依真實 rankings API 回傳資料正確顯示
+
+**測試流程**
+
+1. 進入 `/knowledge-base`。
+2. 切換時間範圍為 `dateRangePresets.last7Days`。
+3. 呼叫 `RankingsApi.list()` 取得同一時間範圍與 service module 的真實排行資料。
+4. 使用 `expectItemsToMatch(rankings)` 驗證 UI 與真實 API 回傳一致。
+
+此測試標記為 `@Smoke`，可用於快速確認前端與 rankings API 的基本整合。
+
+#### AC 2.5：Rankings API Schema 驗證
+
+> **Given** 我有已登入 storage state  
+> **When** API project 針對所有 `dateRangePresets` 呼叫 rankings API  
+> **Then** response 應包含 `rankings` 陣列  
+> **And** 每筆 ranking item 應符合基本 schema
+
+**對應測試**
+
+`e2e/api/rankings-api.spec.ts`
+
+**Expect 對應**
+
+| Acceptance Criteria | Playwright Expect |
+| --- | --- |
+| response 包含 rankings 陣列 | `expect(response).toHaveProperty("rankings")`、`expect(Array.isArray(response.rankings)).toBe(true)` |
+| rankings 筆數不超過 defaultLimit | `expect(response.rankings.length).toBeLessThanOrEqual(defaultLimit)` |
+| ranking item schema 正確 | `rank`、`targetTitle`、`actionCount`、選擇性的 `targetId` 型別驗證 |
 
 ### User Story 3：透過 Email 與密碼登入系統
 

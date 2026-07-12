@@ -79,6 +79,14 @@ export default defineConfig({
       retries: 2,
     },
     {
+      name: "api",
+      dependencies: ["setup:authenticated"],
+      testMatch: "**/api/**/*.spec.ts",
+      use: {
+        storageState: config.storageStates.authenticated,
+      },
+    },
+    {
       name: "guest-chromium",
       dependencies: ["setup:guest"],
       testMatch: guestTestMatch,
