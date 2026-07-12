@@ -24,6 +24,39 @@ export class KnowledgeBaseTabSubPage extends BasePage {
     await expect(this.videoLoginRequiredMessage).toBeVisible();
   }
 
+  async expectRestrictedOverlayToFullyCoverBelowHeader() {
+    await expect
+      .poll(
+        async () =>
+          await this.header.root.evaluate((header) => {
+            const headerBox = header.getBoundingClientRect();
+            const viewportWidth = window.innerWidth;
+            const viewportHeight = window.innerHeight;
+
+            return Array.from(document.querySelectorAll("div")).some(
+              (element) => {
+                const style = window.getComputedStyle(element);
+                const box = element.getBoundingClientRect();
+
+                return (
+                  style.position === "fixed" &&
+                  style.zIndex === "1100" &&
+                  Math.abs(box.top - headerBox.bottom) <= 1 &&
+                  box.left <= 1 &&
+                  box.right >= viewportWidth - 1 &&
+                  box.bottom >= viewportHeight - 1
+                );
+              },
+            );
+          }),
+        {
+          message:
+            "Expected video restricted content overlay to cover the area below the header without horizontal offset",
+        },
+      )
+      .toBe(true);
+  }
+
   async expectVideoLoginRequiredMessageHidden() {
     await expect(this.videoLoginRequiredMessage).toBeHidden();
   }
