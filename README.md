@@ -634,7 +634,7 @@ So that 我能使用會員身分進入網站並確認登入成功。
 <img width="799" height="898" alt="image" src="https://github.com/user-attachments/assets/f8312ca9-ebff-4c72-93f9-4ccbdd4addb0" />
 
 #### 完整測試報告錄影檔
-完整操作錄影可參考：  [查看測試操作影片](https://drive.google.com/file/d/1OJQPKjQ2Dz1i5spPOUgAagfq0R2tMjiB/view?usp=drive_link)
+完整操作錄影可參考：  [查看測試操作影片](https://drive.google.com/file/d/14YcZNklckNkRXVhaSXXwYSjfAoD99X6i/view?usp=drive_link)
 
 ## CI
 
