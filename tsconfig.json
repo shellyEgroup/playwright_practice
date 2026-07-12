@@ -11,8 +11,10 @@
     "playwright.config.ts",
     "config/**/*.ts",
     "constants/**/*.ts",
+    "utils/**/*.ts",
     "api/**/*.ts",
     "fixtures/**/*.ts",
+    "e2e/**/*.ts",
     "pages/**/*.ts",
     "payloads/**/*.ts",
     "tests/**/*.ts"

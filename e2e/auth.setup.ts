@@ -2,9 +2,11 @@ import { test as setup } from "@playwright/test";
 import { config } from "../config";
 import { LoginApi } from "../api/login-api";
 import { UserInfoApi } from "../api/user-info";
+import { getXsrfTokenFromCookies } from "../utils/xsrf-token";
+import { setCommonLocalStorage } from "./common/storage-state";
 
 const BASE_URL = config.baseUrl;
-const STORAGE_STATE_PATH = config.storageState;
+const STORAGE_STATE_PATH = config.storageStates.authenticated;
 const COOKIE_DOMAIN = new URL(BASE_URL).hostname;
 
 const LOGIN_ACCOUNT = config.testMember.account;
@@ -30,9 +32,7 @@ setup("auth setup", async ({ context, page }) => {
 
   // 4. 從目前 context cookies 拿 XSRF-TOKEN
   const cookies = await context.cookies(BASE_URL);
-  const xsrfToken = cookies.find(
-    (cookie) => cookie.name === "XSRF-TOKEN",
-  )?.value;
+  const xsrfToken = getXsrfTokenFromCookies(cookies);
 
   if (!xsrfToken) {
     throw new Error("XSRF-TOKEN not found in cookies");
@@ -45,11 +45,10 @@ setup("auth setup", async ({ context, page }) => {
   const { organizationUserId, organizationUserCreateDate } = userInfo;
 
   // 6. 寫入 localStorage
+  await setCommonLocalStorage(page);
+
   await page.evaluate(
     ({ organizationUserId, organizationUserCreateDate }) => {
-      localStorage.setItem("cookieNoticeAccepted", "true");
-      localStorage.setItem("socialWorkerPrompt_permanentDismiss", "true");
-
       localStorage.setItem(
         `familyfinhealth:newsletter-opt-in-invite:v1:${organizationUserId}`,
         JSON.stringify({

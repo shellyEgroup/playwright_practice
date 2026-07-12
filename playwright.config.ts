@@ -1,6 +1,15 @@
 import { defineConfig, devices } from "@playwright/test";
 import { config } from "./config";
 
+const authenticatedTestMatch = [
+  "**/tests/authenticated/**/*.spec.ts",
+  "**/tests/shared/**/*.spec.ts",
+];
+const guestTestMatch = [
+  "**/tests/guest/**/*.spec.ts",
+  "**/tests/shared/**/*.spec.ts",
+];
+
 /**
  * Read environment variables from file.
  * https://github.com/motdotla/dotenv
@@ -31,26 +40,58 @@ export default defineConfig({
     actionTimeout: config.timeout,
 
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
-    trace: "on-first-retry",
-    // screenshot: "only-on-failure",
+    trace: process.env.CI ? "on-first-retry" : "retain-on-failure",
+    screenshot: "only-on-failure",
     // video: "retain-on-failure",
   },
 
   /* Configure projects for major browsers */
   projects: [
     {
-      name: "setup",
+      name: "setup:authenticated",
       testMatch: "**/auth.setup.ts",
     },
     {
-      name: "chromium",
-      dependencies: ["setup"],
-      use: { ...devices["Desktop Chrome"], storageState: config.storageState },
+      name: "setup:guest",
+      testMatch: "**/guest.setup.ts",
     },
     {
-      name: "Mobile Safari",
-      dependencies: ["setup"],
-      use: { ...devices["iPhone 15"], storageState: config.storageState },
+      name: "authenticated-chromium",
+      dependencies: ["setup:authenticated"],
+      testMatch: authenticatedTestMatch,
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: config.storageStates.authenticated,
+      },
+    },
+    {
+      name: "authenticated-mobile-safari",
+      dependencies: ["setup:authenticated"],
+      testMatch: authenticatedTestMatch,
+      use: {
+        ...devices["iPhone 15"],
+        storageState: config.storageStates.authenticated,
+      },
+      timeout: config.longTimeout,
+      retries: 2,
+    },
+    {
+      name: "guest-chromium",
+      dependencies: ["setup:guest"],
+      testMatch: guestTestMatch,
+      use: {
+        ...devices["Desktop Chrome"],
+        storageState: config.storageStates.guest,
+      },
+    },
+    {
+      name: "guest-mobile-safari",
+      dependencies: ["setup:guest"],
+      testMatch: guestTestMatch,
+      use: {
+        ...devices["iPhone 15"],
+        storageState: config.storageStates.guest,
+      },
       timeout: config.longTimeout,
       retries: 2,
     },

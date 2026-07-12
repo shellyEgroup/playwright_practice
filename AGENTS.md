@@ -7,8 +7,9 @@
 - 這是 Playwright + TypeScript E2E 測試專案，目標站台為 Family FinHealth。
 - 測試主要覆蓋知識庫、影音專區登入權限、熱門知識排行與時間範圍切換。
 - 測試同時使用 UI 操作與 API client，讓畫面資料能對照後端即時回傳結果。
-- `playwright.config.ts` 的 `testDir` 是 `./e2e`，目前 project 包含 `setup`、`chromium`、`Mobile Safari`。
-- `setup` project 會執行 `e2e/auth.setup.ts`，產生 `playwright/.auth/user.json` 作為已登入 storage state。
+- `playwright.config.ts` 的 `testDir` 是 `./e2e`，目前 project 依使用者狀態與裝置拆分為 `authenticated-chromium`、`authenticated-mobile-safari`、`guest-chromium`、`guest-mobile-safari`。
+- `setup:authenticated` project 會執行 `e2e/auth.setup.ts`，產生 `playwright/.auth/authenticated.json` 作為已登入 storage state。
+- `setup:guest` project 會執行 `e2e/guest.setup.ts`，產生 `playwright/.auth/guest.json` 作為未登入 storage state，並保留共用 dismiss 類 localStorage。
 
 ## 目錄與責任
 
@@ -37,8 +38,9 @@
 - 優先使用使用者視角 locator：`getByRole`、accessible name、`getByText`。只有在無穩定可及性語意時才退回 CSS selector。
 - 斷言優先使用 Playwright web-first assertions，例如 `toBeVisible`、`toHaveText`、`toHaveAccessibleName`、`toHaveCount`。
 - 不要用硬等待如 `waitForTimeout` 修 flake。優先等待 locator 狀態、response、URL、或用 `expect.poll` 驗證實際條件。
-- 需要登入的測試使用 `test.use({ storageState: config.storageState })`。
-- 未登入情境使用 `constants/storage-states.ts` 的 `emptyStorageState`。
+- 需要登入的測試放在 `tests/authenticated/`；未登入情境放在 `tests/guest/`。
+- 若同一 spec 可同時適用已登入與未登入情境，放在 `tests/shared/`，由兩種狀態的 project 一起執行。
+- 測試檔內避免再用 `test.use({ storageState })` 切換登入狀態，優先交給 project 與資料夾命名維護。
 - 手機 Safari 測試 timeout 與 retry 已在 config 中較長，新增測試時先確認流程是否真的需要額外 timeout。
 - `fullyParallel: true`，測試應避免共享可變外部狀態。若某測試會改後端資料，需要隔離資料或明確序列化。
 
@@ -52,28 +54,29 @@
 
 ## 登入與 Storage State
 
-- `e2e/auth.setup.ts` 會先進站取得初始 cookies，再用 login API 建立登入 cookies、取得 user info、寫入 localStorage，最後輸出 storage state。
-- `playwright/.auth/user.json` 是產物且已被 `.gitignore` 忽略。不要提交登入狀態檔。
-- 修改登入流程時，需同時考慮 cookies、`XSRF-TOKEN`、localStorage dismiss flags，以及依賴 `config.storageState` 的測試。
+- `e2e/auth.setup.ts` 會先進站取得初始 cookies，再用 login API 建立登入 cookies、取得 user info、寫入 localStorage，最後輸出 authenticated storage state。
+- `e2e/guest.setup.ts` 會進站取得初始 cookies，寫入共用 localStorage dismiss flags，最後輸出 guest storage state。
+- `playwright/.auth/` 是產物且已被 `.gitignore` 忽略。不要提交登入狀態檔。
+- 修改登入流程時，需同時考慮 cookies、`XSRF-TOKEN`、localStorage dismiss flags，以及依賴 `config.storageStates` 的測試。
 
 ## 驗證與交付
 
 - 修改測試或 page/component object 後，至少執行相關 spec 或 project：
 
 ```powershell
-npx playwright test e2e/knowledge-base/tests/<spec-file>.ts --project=chromium
+npx playwright test e2e/knowledge-base/tests/authenticated/<spec-file>.ts --project=authenticated-chromium
 ```
 
 - 若修改共用 fixture、API client、config 或登入 setup，優先執行：
 
 ```powershell
-npx playwright test --project=chromium
+npx playwright test --project=authenticated-chromium
 ```
 
 - 若變更可能影響 responsive 或 mobile 行為，也執行：
 
 ```powershell
-npx playwright test --project="Mobile Safari"
+npx playwright test --project=authenticated-mobile-safari
 ```
 
 - 測試依賴外部網站與 API。若失敗，先判斷是程式回歸、測試資料改變、外部站台變動、網路問題，或登入狀態產生失敗。
@@ -81,5 +84,5 @@ npx playwright test --project="Mobile Safari"
 ## Git 與產物
 
 - 不要提交 `node_modules/`、`test-results/`、`playwright-report/`、`playwright/.auth/`、`playwright/.cache/`。
-- 保持 diff 小而聚焦，不要順手重排 README、格式化無關檔案、或重寫中文文案。
+- 保持 diff 小而聚焦。
 - 工作區可能已有使用者改動。不要還原未經要求的變更；若同檔案已有使用者修改，先讀懂再接著改。

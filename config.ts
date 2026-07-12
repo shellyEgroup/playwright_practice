@@ -6,7 +6,13 @@ export const config = {
   organizationId: "yMJHyi6R1CB9whpdNvtA",
   organizationOldId: "0A4f9LDYSg2A7OzOih8A3g",
 
-  storageState: path.resolve(process.cwd(), "playwright/.auth/user.json"),
+  storageStates: {
+    authenticated: path.resolve(
+      process.cwd(),
+      "playwright/.auth/authenticated.json",
+    ),
+    guest: path.resolve(process.cwd(), "playwright/.auth/guest.json"),
+  },
 
   timeout: 30000,
   longTimeout: 600000,

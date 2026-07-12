@@ -51,7 +51,9 @@ Use the scoped form only when a meaningful module or area is clear from the stag
    - Use `type: #issue-number description` when no clear scope is needed.
    - Keep the description concise and in Traditional Chinese by default.
    - Describe the actual staged change, not the user's prompt.
-8. Run `git commit -m "<message>"` only after the staged diff and issue number are clear.
+   - If the staged diff contains several meaningful changes, cross-file behavior, or non-obvious implementation decisions, add a commit body that summarizes the actual changes.
+   - Keep the body concise, usually 2-5 bullet points or short lines, and focus on what changed and why it matters for reviewing the commit later.
+8. Run `git commit -m "<subject>"` for subject-only commits, or `git commit -m "<subject>" -m "<body>"` when a body is useful, only after the staged diff and issue number are clear.
 9. After committing, report the commit hash and message.
 
 ## Message Rules
@@ -69,6 +71,12 @@ Use the scoped form only when a meaningful module or area is clear from the stag
 - Put the description after the issue number and a space.
 - Do not use trailing periods.
 - Do not mention files mechanically unless that is the clearest description.
+- Add a commit body when it helps future readers understand the real change set, especially for broad diffs, new workflows, config/test restructuring, or changes spanning multiple modules.
+- In the body, prefer Traditional Chinese bullet points that describe outcomes, for example:
+  - `- 拆分登入與未登入 Playwright projects，讓 storage state 由 project 統一管理`
+  - `- 新增 guest setup 保留共用 localStorage dismiss flags`
+  - `- 移動測試到 authenticated/guest 資料夾以降低 spec 內狀態切換`
+- Do not include a body just to repeat the subject or list every changed file.
 
 ## Safety Rules
 
@@ -87,4 +95,5 @@ Before committing, verify:
 - The commit type matches the primary staged change.
 - The issue number is explicit or confidently inferred.
 - The description matches the staged diff.
+- The commit body is included when the staged content is rich enough to benefit from review context, and omitted when the subject is sufficient.
 - No unintended generated, auth, cache, or secret files are staged.
