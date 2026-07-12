@@ -10,6 +10,18 @@ export class BasePage {
     this.header = new Header(this.page);
   }
 
+  async isMobileViewport(): Promise<boolean> {
+    return await this.page.evaluate(() =>
+      window.matchMedia("(max-width: 899px)").matches,
+    );
+  }
+
+  async expectHeaderPrimaryActionsAvailable() {
+    await this.header.expectPrimaryActionsAvailable({
+      isMobile: await this.isMobileViewport(),
+    });
+  }
+
   async isBodyScrollLocked(): Promise<boolean> {
     return await this.page.evaluate(() => {
       const bodyStyle = window.getComputedStyle(document.body);
